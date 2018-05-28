@@ -34,9 +34,8 @@ class FlutterBleLib {
     });
   }
 
-  Future<Null> createClient(String restoreStateIdentifier) async {
-    await _mainMethodChannel.invokeMethod(_createClient,
-        <String, String>{_restoreStateIdentifier: restoreStateIdentifier});
+  Future<Null> createClient([String restoreStateIdentifier]) async {
+    await _mainMethodChannel.invokeMethod(_createClient, restoreStateIdentifier);
     return;
   }
 
