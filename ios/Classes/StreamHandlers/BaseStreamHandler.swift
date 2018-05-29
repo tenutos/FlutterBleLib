@@ -1,4 +1,5 @@
 import Foundation
+import Flutter
 
 class BaseStreamHandler: NSObject, FlutterStreamHandler {
     private(set) var sink: FlutterEventSink?

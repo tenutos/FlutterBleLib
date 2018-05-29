@@ -54,7 +54,7 @@ message CharacteristicMessages {
 message CharacteristicMessage {
     double id = 1;
     string uuid = 2;
-    int32 serviceId = 3;
+    int64 serviceId = 3;
     string serviceUuid = 4;
     string deviceId = 5;
     bool isReadable = 6;

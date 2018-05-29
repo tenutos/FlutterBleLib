@@ -4,6 +4,14 @@ import SwiftProtobuf
 
 enum LibError: Error {
     case flutterError(FlutterError)
+
+    static func createIncorrectArgumentsMessage(arguments: Any?, function: String = #function) -> String {
+        return "Received incorrect arguments: \(String(describing: arguments)), function: \(function)"
+    }
+
+    static func createDataSerializationFailedMessage(data: Any?, function: String = #function) -> String {
+        return "Cannot serialize data \(String(describing: data)), function: \(function)"
+    }
 }
 
 public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
@@ -17,7 +25,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
     let scanDevicesHandler = MessageStreamHandler<ScanResultMessage>()
     let stateChangeHandler = ObjectStreamHandler<Int>()
     let deviceConnectionChangeHandler = MessageStreamHandler<BleDeviceMessage>()
-    let monitorCharacteristicChangeHandler = MessageStreamHandler<MonitorCharacteristicMessage>()
+    let monitorCharacteristicHandler = MessageStreamHandler<MonitorCharacteristicMessage>()
     let restoreStateHandler = ObjectStreamHandler<[String: Any]>()
 
     var manager: BleClientManager?
@@ -26,13 +34,13 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
         let scanDevicesChannel = FlutterEventChannel(name: Namespace.scanDevices.rawValue, binaryMessenger: messenger)
         let stateChangeChannel = FlutterEventChannel(name: Namespace.stateChange.rawValue, binaryMessenger: messenger)
         let deviceConnectionChangeChannel = FlutterEventChannel(name: Namespace.deviceConnectionChange.rawValue, binaryMessenger: messenger)
-        let monitorCharacteristicChangeChannel = FlutterEventChannel(name: Namespace.monitorCharacteristicChange.rawValue, binaryMessenger: messenger)
+        let monitorCharacteristicChannel = FlutterEventChannel(name: Namespace.monitorCharacteristicChange.rawValue, binaryMessenger: messenger)
         let restoreStateChannel = FlutterEventChannel(name: Namespace.restoreState.rawValue, binaryMessenger: messenger)
 
         scanDevicesChannel.setStreamHandler(scanDevicesHandler)
         stateChangeChannel.setStreamHandler(stateChangeHandler)
         deviceConnectionChangeChannel.setStreamHandler(deviceConnectionChangeHandler)
-        monitorCharacteristicChangeChannel.setStreamHandler(monitorCharacteristicChangeHandler)
+        monitorCharacteristicChannel.setStreamHandler(monitorCharacteristicHandler)
         restoreStateChannel.setStreamHandler(restoreStateHandler)
     }
 
@@ -122,7 +130,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
 
     private func setLogLevel(arguments: Any?, result: FlutterResult) throws {
         guard let logLevel = arguments as? String else {
-            throw LibError.flutterError(FlutterError.incorrectMethodArguments(methodName: #function, arguments: arguments))
+            fatalError(LibError.createIncorrectArgumentsMessage(arguments: arguments))
         }
         let manager = try ensureManagerCreated()
         manager.setLogLevel(logLevel.capitalized)
@@ -131,11 +139,10 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
 
     private func logLevel(result: FlutterResult) throws {
         let manager = try ensureManagerCreated()
-        let details = #function
+        let function = #function
         manager.logLevel { obj in
             guard let level = obj as? UInt8, let logLevel = LogLevelMessage(rawValue: Int(level)) else {
-                result(FlutterError.dataSerializationFailed(data: obj, details: details))
-                return
+                fatalError(LibError.createDataSerializationFailedMessage(data: obj, function: function))
             }
             result(logLevel.rawValue)
         }
@@ -143,7 +150,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
 
     private func cancelTransaction(arguments: Any?, result: FlutterResult) throws {
         guard let transactionId = arguments as? String else {
-            throw LibError.flutterError(FlutterError.incorrectMethodArguments(methodName: #function, arguments: arguments))
+            fatalError(LibError.createIncorrectArgumentsMessage(arguments: arguments))
         }
         let manager = try ensureManagerCreated()
         manager.cancelTransaction(transactionId)
@@ -152,10 +159,10 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
 
     private func state(result: FlutterResult) throws {
         let manager = try ensureManagerCreated()
+        let function = #function
         manager.state { obj in
             guard let stateInt = obj as? Int, let state = BluetoothStateMessage(rawValue: stateInt) else {
-                result(FlutterError.dataSerializationFailed(data: obj, details: "state"))
-                return
+                fatalError(LibError.createDataSerializationFailedMessage(data: obj, function: function))
             }
             result(state.rawValue)
         }
@@ -180,7 +187,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
             let deviceId = dict["deviceId"] as? String,
             let mtu = dict["mtu"] as? Int,
             let transactionId = dict["transactionId"] as? String else {
-                throw LibError.flutterError(FlutterError.incorrectMethodArguments(methodName: #function, arguments: arguments))
+                fatalError(LibError.createIncorrectArgumentsMessage(arguments: arguments))
         }
         let manager = try ensureManagerCreated()
         manager.requestMTUForDevice(
@@ -196,7 +203,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
         guard let dict = arguments as? [String: AnyObject],
             let deviceId = dict["deviceId"] as? String,
             let transactionId = dict["transactionId"] as? String else {
-                throw LibError.flutterError(FlutterError.incorrectMethodArguments(methodName: #function, arguments: arguments))
+                fatalError(LibError.createIncorrectArgumentsMessage(arguments: arguments))
         }
         let manager = try ensureManagerCreated()
         manager.readRSSIForDevice(
@@ -226,8 +233,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
         let deviceId = try retrieveDeviceId(fromArgument: arguments)
         manager.isDeviceConnected(deviceId, resolve: { obj in
             guard let isConnected = obj as? Bool else {
-                result(FlutterError.dataSerializationFailed(data: obj))
-                return
+                fatalError(LibError.createDataSerializationFailedMessage(data: obj))
             }
             result(isConnected)
         }, reject: handleReject(result: result))
@@ -253,7 +259,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
         guard let dict = arguments as? [String: AnyObject],
             let deviceId = dict["deviceId"] as? String,
             let serviceUUID = dict["serviceUUID"] as? String else {
-                throw LibError.flutterError(FlutterError.incorrectMethodArguments(methodName: #function, arguments: arguments))
+                fatalError(LibError.createIncorrectArgumentsMessage(arguments: arguments))
         }
         let manager = try ensureManagerCreated()
         manager.characteristicsForDevice(
@@ -266,9 +272,8 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
 
     private func characteristicsForService(arguments: Any?, result: @escaping FlutterResult) throws {
         guard let dict = arguments as? [String: AnyObject],
-            let serviceIdentifierString = dict["serviceIdentifier"] as? String,
-            let serviceIdentifier = Double(serviceIdentifierString) else {
-                throw LibError.flutterError(FlutterError.incorrectMethodArguments(methodName: #function, arguments: arguments))
+            let serviceIdentifier = dict["serviceIdentifier"] as? Double else {
+                fatalError(LibError.createIncorrectArgumentsMessage(arguments: arguments))
         }
         let manager = try ensureManagerCreated()
         manager.characteristicsForService(
@@ -286,7 +291,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
             let valueBase64 = dict["valueBase64"] as? String,
             let response = dict["response"] as? Bool,
             let transactionId = dict["transactionId"] as? String else {
-                throw LibError.flutterError(FlutterError.incorrectMethodArguments(methodName: #function, arguments: arguments))
+                fatalError(LibError.createIncorrectArgumentsMessage(arguments: arguments))
         }
         let manager = try ensureManagerCreated()
         manager.writeCharacteristicForDevice(
@@ -308,7 +313,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
             let valueBase64 = dict["valueBase64"] as? String,
             let response = dict["response"] as? Bool,
             let transactionId = dict["transactionId"] as? String else {
-                throw LibError.flutterError(FlutterError.incorrectMethodArguments(methodName: #function, arguments: arguments))
+                fatalError(LibError.createIncorrectArgumentsMessage(arguments: arguments))
         }
         let manager = try ensureManagerCreated()
         manager.writeCharacteristicForService(
@@ -328,7 +333,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
             let valueBase64 = dict["valueBase64"] as? String,
             let response = dict["response"] as? Bool,
             let transactionId = dict["transactionId"] as? String else {
-                throw LibError.flutterError(FlutterError.incorrectMethodArguments(methodName: #function, arguments: arguments))
+                fatalError(LibError.createIncorrectArgumentsMessage(arguments: arguments))
         }
         let manager = try ensureManagerCreated()
         manager.writeCharacteristic(
@@ -347,7 +352,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
             let serviceUUID = dict["serviceUUID"] as? String,
             let characteristicUUID = dict["characteristicUUID"] as? String,
             let transactionId = dict["transactionId"] as? String else {
-                throw LibError.flutterError(FlutterError.incorrectMethodArguments(methodName: #function, arguments: arguments))
+                fatalError(LibError.createIncorrectArgumentsMessage(arguments: arguments))
         }
         let manager = try ensureManagerCreated()
         manager.readCharacteristicForDevice(
@@ -365,7 +370,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
             let serviceIdentifier = dict["serviceIdentifier"] as? Double,
             let characteristicUUID = dict["characteristicUUID"] as? String,
             let transactionId = dict["transactionId"] as? String else {
-                throw LibError.flutterError(FlutterError.incorrectMethodArguments(methodName: #function, arguments: arguments))
+                fatalError(LibError.createIncorrectArgumentsMessage(arguments: arguments))
         }
         let manager = try ensureManagerCreated()
         manager.readCharacteristicForService(
@@ -381,7 +386,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
         guard let dict = arguments as? [String: AnyObject],
             let characteristicIdentifier = dict["characteristicIdentifier"] as? Double,
             let transactionId = dict["transactionId"] as? String else {
-                throw LibError.flutterError(FlutterError.incorrectMethodArguments(methodName: #function, arguments: arguments))
+                fatalError(LibError.createIncorrectArgumentsMessage(arguments: arguments))
         }
         let manager = try ensureManagerCreated()
         manager.readCharacteristic(
@@ -398,7 +403,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
             let serviceUUID = dict["serviceUUID"] as? String,
             let characteristicUUID = dict["characteristicUUID"] as? String,
             let transactionId = dict["transactionId"] as? String else {
-                throw LibError.flutterError(FlutterError.incorrectMethodArguments(methodName: #function, arguments: arguments))
+                fatalError(LibError.createIncorrectArgumentsMessage(arguments: arguments))
         }
         let manager = try ensureManagerCreated()
         manager.monitorCharacteristicForDevice(
@@ -416,7 +421,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
             let serviceIdentifier = dict["serviceIdentifier"] as? Double,
             let characteristicUUID = dict["characteristicUUID"] as? String,
             let transactionId = dict["transactionId"] as? String else {
-                throw LibError.flutterError(FlutterError.incorrectMethodArguments(methodName: #function, arguments: arguments))
+                fatalError(LibError.createIncorrectArgumentsMessage(arguments: arguments))
         }
         let manager = try ensureManagerCreated()
         manager.monitorCharacteristicForService(
@@ -432,7 +437,7 @@ public class SwiftFlutterBleLibPlugin: NSObject, FlutterPlugin {
         guard let dict = arguments as? [String: AnyObject],
             let characteristicIdentifier = dict["characteristicIdentifier"] as? Double,
             let transactionId = dict["transactionId"] as? String else {
-                throw LibError.flutterError(FlutterError.incorrectMethodArguments(methodName: #function, arguments: arguments))
+                fatalError(LibError.createIncorrectArgumentsMessage(arguments: arguments))
         }
         let manager = try ensureManagerCreated()
         manager.monitorCharacteristic(
@@ -450,44 +455,67 @@ extension SwiftFlutterBleLibPlugin: BleClientManagerDelegate {
         case BleEvent.scanEvent:
             handleDispatchEvent(value: value, handler: scanDevicesHandler, createEventData: { (value) -> EventData<[String: AnyObject]>? in
                 return EventData(value: value)
-            }) { (data: [String: AnyObject]) -> ScanResultMessage? in
+            }) { (data: [String: AnyObject], _) -> ScanResultMessage? in
                 return ScanResultMessage(bleData: data)
             }
         case BleEvent.stateChangeEvent:
-            handleDispatchEvent(value: value, handler: stateChangeHandler, createEventData: { (value) -> EventData<[String: AnyObject]>? in
+            handleDispatchEvent(value: value, objectHandler: stateChangeHandler, createEventData: { (value) -> EventData<String>? in
                 return EventData(value: value)
-            }) { (data: [String: AnyObject]) -> ScanResultMessage? in
-                return ScanResultMessage(bleData: data)
+            }) { (stringData, _) -> Int? in
+                return BluetoothStateMessage(string: stringData)?.rawValue
             }
-
+        case BleEvent.disconnectionEvent:
+            handleDispatchEvent(value: value, handler: deviceConnectionChangeHandler, createEventData: { (value) -> EventData<[String: AnyObject]>? in
+                return EventData(value: value)
+            }) { (data: [String: AnyObject], _) -> BleDeviceMessage? in
+                return BleDeviceMessage(bleData: data)
+            }
+        case BleEvent.readEvent:
+            handleDispatchEvent(value: value, handler: monitorCharacteristicHandler, createEventData: { (value) -> EventData<[String: AnyObject]>? in
+                return EventData(value: value)
+            }) { (data: [String: AnyObject], transactionID: Any?) -> MonitorCharacteristicMessage? in
+                return MonitorCharacteristicMessage(bleData: data, transactionID: transactionID)
+            }
+        case BleEvent.restoreStateEvent:
+            handleDispatchEvent(value: value, objectHandler: restoreStateHandler, createEventData: { (value) -> EventData<[String: Any]>? in
+                return EventData(value: value)
+            }) { (data, _) -> [String: Any] in
+                return data
+            }
+        default:
+            fatalError("Cannot handle dispatchEvent with name: \(name), value: \(value)")
         }
-        //    if([BleEvent.scanEvent isEqualToString: name]) {
-        //        [_scanDevicesHandler handleScanDevice : [Converter convertToScanResultMessage:value]];
-        //    } else if([BleEvent.stateChangeEvent isEqualToString: name]) {
-        //        [_bluetoothStateHandler handleBluetoothState:[Converter convertToBleDataBluetoothStateMessageFromString:value]];
-        //    } else if([BleEvent.disconnectionEvent isEqualToString: name]) {
-        //        [_deviceConnectionChangeHandler handleDeviceConnectionState:[Converter convertToBleDeviceMessage:value]];
-        //    } else if([BleEvent.readEvent isEqualToString: name]) {
-        //        [_monitorCharacteristicHandler handleMonitorCharacteristic:[Converter conevrtToMonitorCharacteristicMessage:value]];
-        //    } else if([BleEvent.restoreStateEvent isEqualToString:name]) {
-        //        [_restoreStateHandler handleResoreState:value];
-        //    }
     }
 
-    private func handleDispatchEvent<T, M: Message>(value: Any, handler: MessageStreamHandler<M>, createEventData: (Any) -> EventData<T>?, createMessage: (T) -> M?){
+    private func handleDispatchEvent<T, M: Message>(value: Any, handler: MessageStreamHandler<M>, createEventData: (Any) -> EventData<T>?, createMessage: (T, Any?) -> M?){
         guard let eventData = createEventData(value) else {
-            handler.sendError(FlutterError.dataSerializationFailed(data: value))
-            return
+            fatalError(LibError.createDataSerializationFailedMessage(data: value))
         }
         if let error = eventData.error {
             handler.sendError(error)
         } else if let data = eventData.data {
-            guard let message = createMessage(data) else {
-                handler.sendError(FlutterError.dataSerializationFailed(data: data))
+            guard let message = createMessage(data, eventData.additionalData) else {
+                fatalError(LibError.createDataSerializationFailedMessage(data: data))
             }
             handler.send(message)
         } else {
-            handler.sendError(FlutterError.dataSerializationFailed(data: value))
+            fatalError(LibError.createDataSerializationFailedMessage(data: value))
+        }
+    }
+
+    private func handleDispatchEvent<T, M>(value: Any, objectHandler: ObjectStreamHandler<M>, createEventData: (Any) -> EventData<T>?, parseData: (T, Any?) -> M?){
+        guard let eventData = createEventData(value) else {
+            fatalError(LibError.createDataSerializationFailedMessage(data: value))
+        }
+        if let error = eventData.error {
+            objectHandler.sendError(error)
+        } else if let data = eventData.data {
+            guard let message = parseData(data, eventData.additionalData) else {
+                fatalError(LibError.createDataSerializationFailedMessage(data: data))
+            }
+            objectHandler.send(message)
+        } else {
+            fatalError(LibError.createDataSerializationFailedMessage(data: value))
         }
     }
 }

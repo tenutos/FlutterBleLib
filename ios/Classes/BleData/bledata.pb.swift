@@ -260,7 +260,7 @@ struct CharacteristicMessage {
 
   var uuid: String = String()
 
-  var serviceID: Int32 = 0
+  var serviceID: Int64 = 0
 
   var serviceUuid: String = String()
 
@@ -720,7 +720,7 @@ extension CharacteristicMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
       switch fieldNumber {
       case 1: try decoder.decodeSingularDoubleField(value: &self.id)
       case 2: try decoder.decodeSingularStringField(value: &self.uuid)
-      case 3: try decoder.decodeSingularInt32Field(value: &self.serviceID)
+      case 3: try decoder.decodeSingularInt64Field(value: &self.serviceID)
       case 4: try decoder.decodeSingularStringField(value: &self.serviceUuid)
       case 5: try decoder.decodeSingularStringField(value: &self.deviceID)
       case 6: try decoder.decodeSingularBoolField(value: &self.isReadable)
@@ -743,7 +743,7 @@ extension CharacteristicMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
       try visitor.visitSingularStringField(value: self.uuid, fieldNumber: 2)
     }
     if self.serviceID != 0 {
-      try visitor.visitSingularInt32Field(value: self.serviceID, fieldNumber: 3)
+      try visitor.visitSingularInt64Field(value: self.serviceID, fieldNumber: 3)
     }
     if !self.serviceUuid.isEmpty {
       try visitor.visitSingularStringField(value: self.serviceUuid, fieldNumber: 4)

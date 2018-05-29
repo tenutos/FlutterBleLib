@@ -27,7 +27,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: 9d0fac939486c9aba2809b7982dfdbb47a7b0296
-  flutter_ble_lib: 6d4cd4a82cca5d4def55aa8fea91309016bc3047
+  flutter_ble_lib: fbbf019a83b1ca09386dcbb7a7090e35fdefbd22
   RxBluetoothKit: 34adec556c1b3cb71f144d8477968c4f21c6aaf9
   RxSwift: e49536837d9901277638493ea537394d4b55f570
   SwiftProtobuf: 5ccc0e4054e37c75800e5744acb2aa80bb72b39c

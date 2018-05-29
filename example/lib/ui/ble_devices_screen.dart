@@ -260,12 +260,17 @@ class BleDevicesState extends State<BleDevicesScreen> {
   }
 
   _addOrUpdateIfNecessary(ScanResult scanResultItem) {
+    var updated = false;
     for (var scanResult in _scanResults) {
       if (scanResult.hasTheSameDeviceAs(scanResultItem)) {
         scanResult.update(scanResultItem);
-        return;
+        updated = true;
+        break;
       }
     }
-    _scanResults.add(scanResultItem);
+    if (!updated) {
+      _scanResults.add(scanResultItem);
+    }
+    _scanResults.sort((a, b) => b.rssi.compareTo(a.rssi));
   }
 }
